@@ -3,10 +3,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 def generate_chinese_text():
     # 在这里输入你想滚动的长文本
-    text ="廉洁文化"     
+    text ="清若荷花不染尘  廉如梅花不畏寒"     
     HEIGHT = 40
     # 字体大小设为 36，留一点上下边距
-    FONT_SIZE = 36 
+    FONT_SIZE = 40 
     
     # 请确保电脑里有这个中文字体文件
     try:

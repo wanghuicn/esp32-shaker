@@ -11,7 +11,7 @@
 // ==========================================
 volatile SystemMode currentMode = MODE_PICTURE; 
 volatile int currentImgIdx = 0;     
-volatile uint8_t globalBright = 60; 
+volatile uint8_t globalBright =200; 
 volatile unsigned long lastTriggerTime = 0;
 volatile int currentVolumeLevel = 0; 
 
@@ -43,7 +43,7 @@ void updateStatusLED() {
         case MODE_VOLTAGE:   c = RgbColor(50, 50, 0); break;
         case MODE_TIME:      c = RgbColor(0, 50, 50); break;
         case MODE_PICTURE:   c = RgbColor(0, 50, 0); break;
-        case MODE_CHINESE:   c = RgbColor(50, 20, 0); break; // 橙色
+        case MODE_CHINESE:   c = RgbColor(0, 0, 50); break;  // 蓝色
         case MODE_VU_METER:  c = RgbColor(0, 0, 50); break;  // 蓝色
         case MODE_STANDBY:   c = RgbColor(50, 0, 0); break;
         default: break;
@@ -130,7 +130,7 @@ void drawFrame() {
             // 我们给文字模式单独设置一个缩短的延时（比如原来的二分之一）
             int textDelay = PIXEL_DELAY_US / 2; 
 
-            int offset = (millis() / 20) % CHINESE_TEXT_WIDTH;
+            int offset = (millis() / 15) % CHINESE_TEXT_WIDTH;
             
             // 循环 200 次，画出更宽的画面
             for (int col = 0; col < TEXT_VIEW_WIDTH; col++) {
@@ -138,7 +138,7 @@ void drawFrame() {
                 clearAllStrips();
                 for (int row = 0; row < 40; row++) {
                     if (chinese_text_data[data_col][row / 8] & (1 << (row % 8))) {
-                        setPixel(row, DimColor(0xFF8800, globalBright));
+                        setPixel(row, DimColor(0x0000FF, globalBright));
                     }
                 }
                 showAllStrips(); 

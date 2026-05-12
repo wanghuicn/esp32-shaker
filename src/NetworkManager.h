@@ -3,8 +3,8 @@
 #include <time.h>
 #include "Config.h"
 
-const char* ssid = "0402";        // 修改为你的WiFi
-const char* password = "13706718353"; // 修改为你的密码
+const char* ssid = "Redmi K50 Pro";        // 修改为你的WiFi
+const char* password = "96886596"; // 修改为你的密码
 
 inline void initNetworkAndTime() {
     Serial.print("Connecting to WiFi");
