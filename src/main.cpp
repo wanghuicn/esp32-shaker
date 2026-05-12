@@ -18,6 +18,8 @@ volatile int currentVolumeLevel = 0;
 
 float batteryVoltage = 0.0;
 String timeString = "WAIT...";
+String serialInputString = "";       // 串口输入字符串
+bool serialStringUpdated = false;    // 串口字符串更新标志
 
 bool useMPU6050 = false;           // 传感器选择标志
 MPU6050Manager mpu6050;            // MPU6050 管理器实例
@@ -48,6 +50,7 @@ void updateStatusLED() {
         case MODE_TIME:      c = RgbColor(0, 50, 50); break;
         case MODE_PICTURE:   c = RgbColor(0, 50, 0); break;
         case MODE_CHINESE:   c = RgbColor(0, 0, 50); break;  // 蓝色
+        case MODE_SERIAL:    c = RgbColor(50, 0, 50); break;  // 紫色
         case MODE_VU_METER:  c = RgbColor(0, 0, 50); break;  // 蓝色
         case MODE_STANDBY:   c = RgbColor(50, 0, 0); break;
         default: break;
@@ -149,6 +152,14 @@ void drawFrame() {
             }
             break;
 
+        case MODE_SERIAL: {
+            // 串口输入显示模式：显示串口输入的英文/数字字符串
+            String displayStr = serialInputString;
+            if (displayStr.length() == 0) displayStr = "WAIT...";
+            drawText(displayStr, DimColor(0xFF00FF, globalBright));
+            break;
+        }
+
         case MODE_CHINESE: {
             // 【中文模式】：独享 200 列超宽视窗！
             int TEXT_VIEW_WIDTH = 200; 
@@ -249,6 +260,17 @@ void LogicTask(void *pvParameters) {
             
             if (lvl >= currentVolumeLevel) currentVolumeLevel = lvl;
             else currentVolumeLevel--; 
+        }
+
+        // 串口数据读取 (在串口模式下持续读取)
+        if (currentMode == MODE_SERIAL && Serial.available()) {
+            String newStr = Serial.readStringUntil('\n');
+            newStr.trim();
+            if (newStr.length() > 0) {
+                serialInputString = newStr;
+                serialStringUpdated = true;
+                Serial.printf("[串口] 收到: %s\n", serialInputString.c_str());
+            }
         }
 
         // 1 秒低频任务

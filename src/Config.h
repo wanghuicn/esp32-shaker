@@ -30,8 +30,9 @@ enum SystemMode {
     MODE_TIME,          // 2: 时钟
     MODE_PICTURE,       // 3: 图片
     MODE_CHINESE,       // 4: 中文滚动
-    MODE_VU_METER,      // 5: 音频拾音条
-    MODE_STANDBY,       // 6: 待机黑屏
+    MODE_SERIAL,        // 5: 串口输入显示
+    MODE_VU_METER,      // 6: 音频拾音条
+    MODE_STANDBY,       // 7: 待机黑屏
     MODE_COUNT          // 模式总数
 };
 
