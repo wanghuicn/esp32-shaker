@@ -5,6 +5,7 @@
 #include "NetworkManager.h"
 #include "ImageGallery.h"
 #include "ChineseText.h"
+#include "MPU6050Manager.h"
 
 // ==========================================
 // 全局变量实体化
@@ -17,6 +18,9 @@ volatile int currentVolumeLevel = 0;
 
 float batteryVoltage = 0.0;
 String timeString = "WAIT...";
+
+bool useMPU6050 = false;           // 传感器选择标志
+MPU6050Manager mpu6050;            // MPU6050 管理器实例
 
 TaskHandle_t DisplayTaskHandle = NULL;
 TaskHandle_t LogicTaskHandle = NULL;
@@ -71,14 +75,12 @@ void handleLongPress() {
 }
 
 // ==========================================
-// 硬件中断：时间窗口屏蔽法 (消除重影与连击)
+// 硬件中断：震动开关中断 (仅当 MPU6050 不可用时使用)
 // ==========================================
 void IRAM_ATTR sensorISR() {
     unsigned long now = millis();
     
-    // 350ms 是“屏蔽窗口期”（包含单次挥动 + 整个挥回来的时间）
-    // 如果你挥得特别快，可以把 350 稍微改小 (比如 250)
-    // 如果挥得比较慢，或者依然有回挥的重影，把 350 改大 (比如 400)
+    // 250ms 屏蔽窗口期
     if (now - lastTriggerTime > 250) { 
         lastTriggerTime = now;
         
@@ -89,6 +91,31 @@ void IRAM_ATTR sensorISR() {
         }
     }
 }
+
+// ==========================================
+// MPU6050 轮询检测 (在 LogicTask 中调用)
+// ==========================================
+void checkMPU6050Shake() {
+    if (!useMPU6050) return; // 未使用 MPU6050，跳过
+    
+    if (mpu6050.detectShake()) {
+        unsigned long now = millis();
+        lastTriggerTime = now;
+        
+        // 串口输出挥动检测信息 (含合加速度)
+        Serial.printf("[MPU6050] 检测到挥动! AX=%.2f AY=%.2f AZ=%.2f |MAG|=%.2f\n", 
+                      mpu6050.getAccelX(), mpu6050.getAccelY(), mpu6050.getAccelZ(),
+                      mpu6050.getMagnitude());
+        
+        if (currentMode != MODE_STANDBY) {
+            // 通知 DisplayTask
+            BaseType_t xWoken = pdFALSE;
+            vTaskNotifyGiveFromISR(DisplayTaskHandle, &xWoken);
+            // 注意：这里不在 ISR 中，不需要 portYIELD
+        }
+    }
+}
+
 void drawFrame() {
     switch (currentMode) {
         case MODE_CALIBRATE:
@@ -203,6 +230,9 @@ void LogicTask(void *pvParameters) {
     for (;;) {
         button.tick(); 
         
+        // MPU6050 挥动检测 (如果使用 MPU6050)
+        checkMPU6050Shake();
+        
         // 音频高频采样
         if (currentMode == MODE_VU_METER) {
             int max_v = 0, min_v = 4095;
@@ -236,12 +266,23 @@ void LogicTask(void *pvParameters) {
 // ==========================================
 void setup() {
     Serial.begin(115200);
-    pinMode(PIN_SENSOR, INPUT_PULLUP);
+    
+    // 尝试初始化 MPU6050
+    Serial.println("[系统] 正在检测 MPU6050...");
+    useMPU6050 = mpu6050.begin();
+    
+    if (!useMPU6050) {
+        // MPU6050 不可用，使用震动开关
+        Serial.println("[系统] MPU6050 未检测到，回退到震动开关模式");
+        pinMode(PIN_SENSOR, INPUT_PULLUP);
+        attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), sensorISR, FALLING);
+    } else {
+        // MPU6050 可用，震动开关引脚保持高阻态（不初始化）
+        Serial.println("[系统] 使用 MPU6050 检测挥动");
+    }
 
     xTaskCreatePinnedToCore(LogicTask, "LogicTask", 8192, NULL, 1, &LogicTaskHandle, 0);
     xTaskCreatePinnedToCore(DisplayTask, "DisplayTask", 8192, NULL, 2, &DisplayTaskHandle, 1);
-
-    attachInterrupt(digitalPinToInterrupt(PIN_SENSOR), sensorISR, FALLING);
 }
 
 void loop() { vTaskDelete(NULL); }
